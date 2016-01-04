@@ -1,0 +1,4 @@
+.vscode/
+tilesources/
+node_modules/
+test/public/features/

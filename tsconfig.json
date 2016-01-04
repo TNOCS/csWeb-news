@@ -1,0 +1,23 @@
+{
+    "version": "1.7.3",
+    "compilerOptions": {
+        "target": "es5",
+        "module": "commonjs",
+        "declaration": true,
+        "noImplicitAny": false,
+        "removeComments": false,
+        "preserveConstEnums": true,
+        "noLib": false,
+        "sourceMap": true
+    },
+    "exclude": [],
+    "files": [
+        "typings/node/node.d.ts",
+        "typings/express/express.d.ts",
+        "typings/request/request.d.ts",
+        "typings/winston/winston.d.ts",
+        "typings/calais-entity-extractor/calais-entity-extractor.d.ts",
+        "test/app.ts",
+        "index.ts"
+    ]
+}

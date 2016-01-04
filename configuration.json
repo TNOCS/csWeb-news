@@ -1,0 +1,7 @@
+{
+    "openCalaisApiKey" : "aJMd2rNCzxVXZE7frwxmE0n4EAdE5q9q",
+    "alchemyFeedApiKey" : "189f1b96db0328e8ea2de56c4331fe1763f54806",
+    "NYTimesApiKey" : "f072b7e81ce6c25e3c7c2e651b5ff2b0:16:73830223",
+    "keywords" : ["Mali", "Kidal", "Gao", "Bamako"],
+    "updateIntervalSeconds" : 3600
+}
