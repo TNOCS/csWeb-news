@@ -1,6 +1,6 @@
 {
   "name": "csweb-news",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Wrapper around AlchemyNews API and OpenCalais API, to find and enhance news articles for based on keywords.",
   "main": "index.js",
   "scripts": {
