@@ -39,6 +39,9 @@ if (configurationOK) {
         alchemyApi: config.alchemyFeedApiKey,
         calaisApi: config.openCalaisApiKey,
         keywords: config.keywords,
+        ignorewords: config.ignorewords,
+        searchurls: config.searchurls,
+        ignoreurls: config.ignoreurls,
         updateInterval: config.updateIntervalSeconds
     };
     var ns = new News.NewsSource(app, opts);

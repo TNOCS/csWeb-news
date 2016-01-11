@@ -13,6 +13,9 @@ var NewsSourceOptions = (function () {
         this.calaisApi = '';
         this.alchemyApi = '';
         this.keywords = [];
+        this.ignorewords = [];
+        this.searchurls = [];
+        this.ignoreurls = [];
         this.updateInterval = 3600;
     }
     return NewsSourceOptions;
@@ -40,7 +43,7 @@ var NewsSource = (function () {
         this.calaisSource = new CalaisSource(app, options.calaisApi, { minConfidence: 0.3, parseData: false });
         // Update on api call
         app.get('/api/newsfeatures', function (req, res) {
-            _this.alchemyFeed.getNewsText(options.keywords, 3, function (data) { _this.processNews(data); });
+            _this.alchemyFeed.getNewsText(options, 3, function (data) { _this.processNews(data); });
             res.statusCode = 200;
             res.end();
         });
@@ -54,13 +57,15 @@ var NewsSource = (function () {
                 n = 100;
             }
             n = Math.round(n);
-            _this.alchemyFeed.getNewsText(options.keywords, n, function (data) { _this.processNews(data); });
+            _this.alchemyFeed.getNewsText(options, n, function (data) { _this.processNews(data); });
             res.statusCode = 200;
             res.end();
         });
+        // Update manually once on startup.
+        this.alchemyFeed.getNewsText(options, 2, function (data) { _this.processNews(data); });
         // Update with interval
         setInterval(function () {
-            _this.alchemyFeed.getNewsText(options.keywords, 2, function (data) { _this.processNews(data); });
+            _this.alchemyFeed.getNewsText(options, 2, function (data) { _this.processNews(data); });
         }, this.options.updateInterval * 1000);
     }
     /** Processes a data object containing news items */
@@ -75,8 +80,8 @@ var NewsSource = (function () {
                     return;
                 items.push(item);
             });
-            // Throttle the OpenCalais calls to 1Hz to prevent exceeding the limit
-            setTimeout(function () { return _this.contactCalais(items); }, 1000);
+            // Throttle the OpenCalais calls to <1Hz to prevent exceeding the limit
+            setTimeout(function () { return _this.contactCalais(items); }, 1100);
         }
         else {
             console.log('No docs found in result');
@@ -209,16 +214,27 @@ var AlchemyFeed = (function () {
             next();
         });
     }
-    AlchemyFeed.prototype.getNewsText = function (keywords, count, clbk) {
-        var keys;
-        if (typeof keywords === 'string') {
-            keys = [keywords];
+    AlchemyFeed.prototype.stringToStringArray = function (arr) {
+        var input = arr;
+        var result;
+        if (typeof input === 'string') {
+            result = [input];
         }
-        else if (Array.isArray(keywords)) {
-            keys = keywords;
+        else if (Array.isArray(input)) {
+            result = input;
         }
         else {
-            console.log('Warning: no valid keyword(s)');
+            console.log('Warning: no valid string(array)');
+            result = null;
+        }
+        return result;
+    };
+    AlchemyFeed.prototype.getNewsText = function (options, count, clbk) {
+        var ignoreKeys = this.stringToStringArray(options.ignorewords) || [];
+        var ignoreUrls = this.stringToStringArray(options.ignoreurls) || [];
+        var searchUrls = this.stringToStringArray(options.searchurls) || [];
+        var keys = this.stringToStringArray(options.keywords);
+        if (!keys) {
             clbk(null, 'No valid keyword(s)');
             return;
         }
@@ -230,7 +246,13 @@ var AlchemyFeed = (function () {
         url.push('end=now');
         url.push('count=' + count);
         url.push('q.enriched.url.enrichedTitle.keywords.keyword.text=O[' + keys.join('^') + ']');
-        url.push('q.enriched.url.text=-[cookies]');
+        url.push('q.enriched.url.text=-[' + ignoreKeys.join('^') + ']');
+        // if (searchUrls && searchUrls.length > 0) {
+        //     url.push('q.enriched.url.url=O+[' + searchUrls.join('^') + ']');
+        // } else
+        if (ignoreUrls && ignoreUrls.length > 0) {
+            url.push('q.enriched.url.url=A-[' + ignoreUrls.join('^') + ']');
+        }
         url.push('return=enriched.url.url,enriched.url.title,enriched.url.text,enriched.url.author');
         var urlString = url.join('&');
         this.performRequest(urlString, function (data, errText) {

@@ -28,6 +28,9 @@ export class NewsSourceOptions {
     calaisApi: string = '';
     alchemyApi: string = '';
     keywords: string[] = [];
+    ignorewords: string[] = [];
+    searchurls: string[] = [];
+    ignoreurls: string[] = [];
     updateInterval: number = 3600;
 };
 
@@ -56,7 +59,7 @@ export class NewsSource {
 
         // Update on api call
         app.get('/api/newsfeatures', (req, res) => {
-            this.alchemyFeed.getNewsText(options.keywords, 3, (data) => { this.processNews(data); });
+            this.alchemyFeed.getNewsText(options, 3, (data) => { this.processNews(data); });
             res.statusCode = 200;
             res.end();
         });
@@ -69,14 +72,16 @@ export class NewsSource {
                 n = 100;
             }
             n = Math.round(n);
-            this.alchemyFeed.getNewsText(options.keywords, n, (data) => { this.processNews(data); });
+            this.alchemyFeed.getNewsText(options, n, (data) => { this.processNews(data); });
             res.statusCode = 200;
             res.end();
         });
 
+        // Update manually once on startup.
+        this.alchemyFeed.getNewsText(options, 2, (data) => { this.processNews(data); });
         // Update with interval
         setInterval(() => {
-            this.alchemyFeed.getNewsText(options.keywords, 2, (data) => { this.processNews(data); });
+            this.alchemyFeed.getNewsText(options, 2, (data) => { this.processNews(data); });
         }, this.options.updateInterval * 1000);
     }
 
@@ -90,8 +95,8 @@ export class NewsSource {
                 if (fs.existsSync(path.join(this.options.newsFolder, item.id + '.json'))) return;
                 items.push(item);
             });
-            // Throttle the OpenCalais calls to 1Hz to prevent exceeding the limit
-            setTimeout(() => this.contactCalais(items), 1000);
+            // Throttle the OpenCalais calls to <1Hz to prevent exceeding the limit
+            setTimeout(() => this.contactCalais(items), 1100);
         } else {
             console.log('No docs found in result');
         }
@@ -234,14 +239,26 @@ export class AlchemyFeed {
         });
     }
 
-    public getNewsText(keywords: string | string[], count: number, clbk: Function): void {
-        var keys: string[];
-        if (typeof keywords === 'string') {
-            keys = [keywords];
-        } else if (Array.isArray(keywords)) {
-            keys = keywords;
+    private stringToStringArray(arr: string | string[]): string[] {
+        let input: any = arr;
+        var result: string[];
+        if (typeof input === 'string') {
+            result = [input];
+        } else if (Array.isArray(input)) {
+            result = input;
         } else {
-            console.log('Warning: no valid keyword(s)');
+            console.log('Warning: no valid string(array)');
+            result = null;
+        }
+        return result;
+    }
+
+    public getNewsText(options: NewsSourceOptions, count: number, clbk: Function): void {
+        let ignoreKeys = this.stringToStringArray(options.ignorewords) || [];
+        let ignoreUrls = this.stringToStringArray(options.ignoreurls) || [];
+        let searchUrls = this.stringToStringArray(options.searchurls) || [];
+        let keys = this.stringToStringArray(options.keywords);
+        if (!keys) {
             clbk(null, 'No valid keyword(s)');
             return;
         }
@@ -252,7 +269,13 @@ export class AlchemyFeed {
         url.push('end=now');
         url.push('count=' + count);
         url.push('q.enriched.url.enrichedTitle.keywords.keyword.text=O[' + keys.join('^') + ']');
-        url.push('q.enriched.url.text=-[cookies]');
+        url.push('q.enriched.url.text=-[' + ignoreKeys.join('^') + ']');
+        // if (searchUrls && searchUrls.length > 0) {
+        //     url.push('q.enriched.url.url=O+[' + searchUrls.join('^') + ']');
+        // } else
+        if (ignoreUrls && ignoreUrls.length > 0) {
+            url.push('q.enriched.url.url=A-[' + ignoreUrls.join('^') + ']');
+        }
         url.push('return=enriched.url.url,enriched.url.title,enriched.url.text,enriched.url.author');
         var urlString = url.join('&');
         this.performRequest(urlString, (data, errText) => {

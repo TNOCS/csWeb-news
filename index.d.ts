@@ -9,6 +9,9 @@ export declare class NewsSourceOptions {
     calaisApi: string;
     alchemyApi: string;
     keywords: string[];
+    ignorewords: string[];
+    searchurls: string[];
+    ignoreurls: string[];
     updateInterval: number;
 }
 export declare class NewsSource {
@@ -25,7 +28,8 @@ export declare class AlchemyFeed {
     private apiKey;
     private keywords;
     constructor(app: express.Express, apiKey: string);
-    getNewsText(keywords: string | string[], count: number, clbk: Function): void;
+    private stringToStringArray(arr);
+    getNewsText(options: NewsSourceOptions, count: number, clbk: Function): void;
     private performRequest(url, cb);
 }
 export declare class CalaisSource {
